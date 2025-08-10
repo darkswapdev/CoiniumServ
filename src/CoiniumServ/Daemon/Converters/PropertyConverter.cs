@@ -28,6 +28,7 @@
 #endregion
 
 
+using System;
 using System.IO;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
@@ -39,16 +40,22 @@ namespace CoiniumServ.Daemon.Converters
     /// Custom json converter for all fields in getinfo() and getmininginfo() that doesn't adhere to standard naming convention.
     /// Property names are converted to lowercase and empty spaces are replaced appropriately.
     /// </summary>
-    public static class PropertyConverter
+    public class PropertyConverter : JsonConverter
     {
-        public static JToken DeserializeWithLowerCasePropertyNames(string jsonStr)
+        public override bool CanConvert(Type objectType)
         {
-            using (TextReader textPCReader = new StringReader(jsonStr))
-            using (JsonReader jsonPCReader = new LowerCasePropertyNameJsonReader(textPCReader))
-            {
-                JsonSerializer ser = new JsonSerializer();
-                return ser.Deserialize<JToken>(jsonPCReader);
-            }
+            return true;
+        }
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            var lowerCaseReader = new LowerCasePropertyNameJsonReader(new StringReader(reader.Value.ToString()));
+            return serializer.Deserialize(lowerCaseReader, objectType);
+        }
+
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            serializer.Serialize(writer, value);
         }
     }
 
@@ -68,7 +75,7 @@ namespace CoiniumServ.Daemon.Converters
                     if ((string)base.Value == "proof of work" || (string)base.Value == "Proof of Work" || (string)base.Value == "proof of stake" || (string)base.Value == "Proof of Stake")
                         return Regex.Replace(((string)base.Value).ToLower(), " ", "-"); // first convert to lowercase then replace spaces
                     else
-                        return Regex.Replace(((string)base.Value).ToLower(), " ", ""); // first convert to lowercase then replace spaces
+                        return (string)base.Value;
                 }
 
                 return base.Value;

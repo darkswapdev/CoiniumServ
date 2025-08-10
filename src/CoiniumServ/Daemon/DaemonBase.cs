@@ -27,6 +27,7 @@
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Reflection;
@@ -39,6 +40,7 @@ using CoiniumServ.Daemon.Exceptions;
 using CoiniumServ.Logging;
 using CoiniumServ.Utils.Extensions;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Serilog;
 
 namespace CoiniumServ.Daemon
@@ -176,21 +178,12 @@ namespace CoiniumServ.Daemon
         {
             string json = GetJsonResponse(httpWebRequest);
 
-            // process response with converter. needed for all coin wallets which gives non-standard info.
-            string jsonLC = PropertyConverter.DeserializeWithLowerCasePropertyNames(json).ToString();
-
-            _logger.Verbose("rx: {0}", jsonLC.PrettifyJson());
+            _logger.Verbose("rx: {0}", json.PrettifyJson());
 
             try
             {
-                var response = JsonConvert.DeserializeObject<DaemonResponse<T>>(jsonLC);
-
-                if (response.Error != null)
-                {
-                    throw _rpcExceptionFactory.GetRpcErrorException(new RpcErrorResponse { Error = response.Error });
-                }
-
-                return response;
+                var jss = new JsonSerializerSettings { Converters = new List<JsonConverter> { new PropertyConverter() } };
+                return JsonConvert.DeserializeObject<DaemonResponse<T>>(json, jss);
             }
             catch (JsonException jsonEx)
             {
@@ -225,7 +218,9 @@ namespace CoiniumServ.Daemon
 
                         using (var reader = new StreamReader(stream))
                         {
-                            return reader.ReadToEnd();
+                            var result = reader.ReadToEnd();
+                            _logger.Verbose("Raw response: {0}", result);
+                            return result;
                         }
                     }
                 }
