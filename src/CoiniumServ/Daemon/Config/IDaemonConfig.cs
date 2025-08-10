@@ -58,5 +58,8 @@ namespace CoiniumServ.Daemon.Config
         /// Timeout for daemon rpc connections in seconds.
         /// </summary>
         int Timeout { get; }
+
+        bool Ssl { get; }
+        string Url { get; }
     }
 }

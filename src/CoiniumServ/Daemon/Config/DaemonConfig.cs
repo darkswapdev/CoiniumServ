@@ -46,6 +46,10 @@ namespace CoiniumServ.Daemon.Config
 
         public int Timeout { get; private set; }
 
+        public bool Ssl { get; private set; }
+
+        public string Url { get; private set; }
+
         public DaemonConfig(dynamic config)
         {
             try
@@ -56,6 +60,8 @@ namespace CoiniumServ.Daemon.Config
                 Username = config.username;
                 Password = config.password;
                 Timeout = config.timeout == 0 ? 5 : config.timeout;
+                Ssl = config.ssl != null && config.ssl;
+                Url = config.url;
 
                 Valid = true;
             }

@@ -63,7 +63,7 @@ namespace CoiniumServ.Daemon
 
             _timeout = daemonConfig.Timeout * 1000; // set the daemon timeout.
 
-            RpcUrl = string.Format("http://{0}:{1}", daemonConfig.Host, daemonConfig.Port);
+            RpcUrl = string.Format("http{0}://{1}:{2}{3}", daemonConfig.Ssl ? "s" : "", daemonConfig.Host, daemonConfig.Port, daemonConfig.Url);
             RpcUser = daemonConfig.Username;
             RpcPassword = daemonConfig.Password;
 
@@ -136,7 +136,7 @@ namespace CoiniumServ.Daemon
 
             // Important, otherwise the service can't deserialse your request properly
             webRequest.UserAgent = string.Format("CoiniumServ {0:} {1:}", VersionInfo.CodeName, Assembly.GetAssembly(typeof(Program)).GetName().Version);
-            webRequest.ContentType = "application/json-rpc";
+            webRequest.ContentType = "application/json";
             webRequest.Method = "POST";
             webRequest.Timeout = _timeout;
 
@@ -183,12 +183,19 @@ namespace CoiniumServ.Daemon
 
             try
             {
-                return JsonConvert.DeserializeObject<DaemonResponse<T>>(jsonLC);
+                var response = JsonConvert.DeserializeObject<DaemonResponse<T>>(jsonLC);
+
+                if (response.Error != null)
+                {
+                    throw _rpcExceptionFactory.GetRpcErrorException(new RpcErrorResponse { Error = response.Error });
+                }
+
+                return response;
             }
             catch (JsonException jsonEx)
             {
                 httpWebRequest = null;
-                throw new Exception("There was a problem deserializing the response from the coin wallet.", jsonEx);
+                throw new Exception($"There was a problem deserializing the response from the coin wallet: {json}", jsonEx);
             }
             catch (Exception exception)
             {
